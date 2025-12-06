@@ -1,6 +1,7 @@
 import express, { Application } from 'express';
 import initDB from './config/db';
 import { authRoutes } from './modules/auth/auth.routes';
+import { userRoutes } from './modules/user/user.routes';
 
 const app: Application = express();
 
@@ -13,6 +14,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
 
 app.use((req, res) => {
   res.status(404).send({
