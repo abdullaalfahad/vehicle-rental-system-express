@@ -118,7 +118,81 @@ const getAllBookings = async (user: JwtPayload) => {
   return data;
 };
 
+const updateBooking = async (
+  role: 'admin' | 'customer',
+  bookingId: number,
+  payload: Record<string, any>
+) => {
+  const { status } = payload;
+
+  // Fetch booking details first
+  const bookingRes = await pool.query(`SELECT * FROM bookings WHERE id = $1`, [bookingId]);
+
+  if (bookingRes.rowCount === 0) {
+    throw new Error('Booking not found');
+  }
+
+  const booking = bookingRes.rows[0];
+
+  if (role === 'customer') {
+    if (status !== 'cancelled') {
+      throw new Error('Customers can only cancel bookings');
+    }
+
+    const now = new Date();
+    const rentStart = new Date(booking.rent_start_date);
+
+    if (now >= rentStart) {
+      throw new Error('You cannot cancel after the rent period has started');
+    }
+
+    const updateRes = await pool.query(
+      `
+      UPDATE bookings 
+      SET status = 'cancelled'
+      WHERE id = $1
+      RETURNING id, customer_id, vehicle_id, rent_start_date, rent_end_date, total_price, status
+    `,
+      [bookingId]
+    );
+
+    return {
+      message: 'Booking cancelled successfully',
+      data: updateRes.rows[0],
+    };
+  }
+
+  if (status !== 'returned') {
+    throw new Error("Admins can only update status to 'returned'");
+  }
+
+  const updateRes = await pool.query(
+    `
+      UPDATE bookings
+      SET status = 'returned'
+      WHERE id = $1
+      RETURNING id, customer_id, vehicle_id, rent_start_date, rent_end_date, total_price, status
+    `,
+    [bookingId]
+  );
+
+  const updatedBooking = updateRes.rows[0];
+
+  await pool.query(`UPDATE vehicles SET availability_status = 'available' WHERE id = $1`, [
+    updatedBooking.vehicle_id,
+  ]);
+
+  return {
+    message: 'Booking marked as returned. Vehicle is now available',
+    data: {
+      ...updatedBooking,
+      vehicle: { availability_status: 'available' },
+    },
+  };
+};
+
 export const bookingServices = {
   createBooking,
   getAllBookings,
+  updateBooking,
 };
