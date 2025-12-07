@@ -22,8 +22,56 @@ const getVehicleById = async (vehicleId: string) => {
   return result.rows[0];
 };
 
+const updateVehicle = async (vehicleId: string, payload: Record<string, any>) => {
+  const vehicle = await getVehicleById(vehicleId);
+  if (!vehicle) {
+    throw new Error('Vehicle not found');
+  }
+
+  const allowedFields = [
+    'vehicle_name',
+    'type',
+    'registration_number',
+    'daily_rent_price',
+    'availability_status',
+  ] as const;
+
+  const updates: Record<string, any> = {};
+  allowedFields.forEach((field) => {
+    if (payload[field] !== undefined) {
+      updates[field] = payload[field];
+    }
+  });
+
+  if (Object.keys(updates).length === 0) {
+    throw new Error('No valid fields provided for update');
+  }
+
+  const setParts: string[] = [];
+  const values: any[] = [];
+
+  Object.entries(updates).forEach(([field, value], index) => {
+    setParts.push(`${field} = $${index + 1}`);
+    values.push(value);
+  });
+
+  values.push(vehicleId);
+
+  const query = `
+    UPDATE vehicles
+    SET ${setParts.join(', ')}
+    WHERE id = $${values.length}
+    RETURNING *
+  `;
+
+  const result = await pool.query(query, values);
+
+  return result.rows[0];
+};
+
 export const vehicleServices = {
   createVehicle,
   getAllVehicles,
   getVehicleById,
+  updateVehicle,
 };
