@@ -69,9 +69,25 @@ const updateVehicle = async (vehicleId: string, payload: Record<string, any>) =>
   return result.rows[0];
 };
 
+const deleteVehicle = async (vehicleId: string) => {
+  const vehicle = await getVehicleById(vehicleId);
+  if (!vehicle) {
+    throw new Error('Vehicle not found');
+  }
+
+  if (vehicle.availability_status === 'booked') {
+    throw new Error('Cannot delete a booked vehicle');
+  }
+
+  await pool.query(`DELETE FROM vehicles WHERE id = $1`, [vehicleId]);
+
+  return;
+};
+
 export const vehicleServices = {
   createVehicle,
   getAllVehicles,
   getVehicleById,
   updateVehicle,
+  deleteVehicle,
 };
