@@ -15,6 +15,15 @@ const initDB = async () => {
             phone VARCHAR(15) NOT NULL,
             role VARCHAR(50) NOT NULL CHECK (role IN ('customer', 'admin'))
         )`);
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS vehicles(
+            id SERIAL PRIMARY KEY,
+            vehicle_name VARCHAR(100) NOT NULL,
+            type VARCHAR(50) NOT NULL CHECK (LOWER(type) IN ('car', 'bike', 'van', 'suv')),
+            registration_number VARCHAR(100) UNIQUE NOT NULL,
+            daily_rent_price NUMERIC NOT NULL CHECK (daily_rent_price > 0),
+            availability_status VARCHAR(50) NOT NULL CHECK (availability_status IN ('available', 'booked'))
+            )`);
 };
 
 export default initDB;
